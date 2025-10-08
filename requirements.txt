@@ -7,4 +7,4 @@ scikit-learn
 joblib
 
 # Code Quality (for the Lint Job)
-flake
+flake8
