@@ -1,0 +1,14 @@
+name: Clothes & Shoes ML CI Pipeline # <-- Your workflow name
+
+on:
+  push:
+    branches: [ master, main ] # <-- Crucial: Listen to the correct branch
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+      # ... (rest of the steps for installing Python, linting, and testing)
