@@ -8,13 +8,13 @@ on:
     branches: [ master, main ]
 
 jobs:
-  # Job 1: Build, Lint, and Test
+  # Job 1: Build, Lint, and Test (Continuous Integration)
   build-and-test:
-    runs-on: ubuntu-latest # Use the latest Linux runner environment
-    
+    runs-on: ubuntu-latest
+
     steps:
     - name: 1. Checkout Repository Code
-      uses: actions/checkout@v4 # Gets a copy of your code
+      uses: actions/checkout@v4
 
     - name: 2. Set up Python 3.10
       uses: actions/setup-python@v4
@@ -26,11 +26,47 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+
     - name: 4. ⚙️ Run Code Linter (Lint Job)
       # Check for style guide violations in all Python files in the src directory
-      run: flake8 src/ --max-line-length=120 
-      
+      run: flake8 src/ --max-line-length=120
+
     - name: 5. 🧪 Run ML Model Tests (Test Job)
       # Execute the test script. If it raises an AssertionError (MAE is too high), the CI fails.
       run: python src/test_model.py
+
+    - name: 6. 📦 Upload Model Artifacts (NEW STEP)
+      # Saves the model files so the deploy job can access them.
+      uses: actions/upload-artifact@v4
+      with:
+        name: model-artifacts # Name of the artifact bundle
+        path: src/ # Uploads all contents of src/
+        retention-days: 1
+
+  # ---------------------------------------------------------------------
+  # Job 2: Deploy (Continuous Deployment)
+  # ---------------------------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test # CRITICAL: This ensures deployment only runs if testing and linting passed
+
+    steps:
+    - name: 1. Download Model Artifacts
+      # Retrieve the artifacts saved in the previous job run
+      uses: actions/download-artifact@v4
+      with:
+        name: model-artifacts
+        path: ./artifacts/ # Downloads files into a new folder named 'artifacts'
+        
+    - name: 2. 🚀 Verify and Simulate Deployment
+      run: |
+        echo "--- Continuous Deployment Process Started ---"
+        echo "Validated model files downloaded to: ./artifacts/"
+        # Verify the files exist
+        ls -l ./artifacts/
+        
+        # This simulates the final deployment action:
+        # In a real project, this would use cloud credentials (GitHub Secrets) 
+        # to upload the model files to AWS S3, Google Cloud Storage, or an ML Platform.
+        
+        echo "✅ Model Deployment Simulated Successfully. Artifacts ready for production use."
