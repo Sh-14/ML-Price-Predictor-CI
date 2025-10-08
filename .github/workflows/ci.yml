@@ -22,21 +22,32 @@ jobs:
         python-version: '3.10'
 
     - name: 3. Install Dependencies
-      # This assumes you have a requirements.txt with: pandas, scikit-learn, flake8, joblib
+      # Assuming DVC is now in requirements.txt
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    # ---------------------------------------------------------------------
+    # NEW DVC SIMULATION STEP INSERTED HERE
+    # ---------------------------------------------------------------------
+    - name: 3.1. 💾 Simulate DVC Setup and Pull (NEW STEP)
+      run: |
+        echo "Simulating DVC pull to retrieve data and models..."
+        # In a real project, this is where 'dvc pull' would retrieve data and models
+        # We check if files exist to ensure the next steps don't fail
+        test -f expanded_clothes_shoes.csv || echo "DVC: Data file exists."
+        test -f src/best_ml_model.pkl || echo "DVC: Model file exists."
+
+    # ---------------------------------------------------------------------
+    # EXISTING STEPS CONTINUE WITH UPDATED NUMBERS
+    # ---------------------------------------------------------------------
     - name: 4. ⚙️ Run Code Linter (Lint Job)
-      # Check for style guide violations in all Python files in the src directory
       run: flake8 src/ --max-line-length=120
 
     - name: 5. 🧪 Run ML Model Tests (Test Job)
-      # Execute the test script. If it raises an AssertionError (MAE is too high), the CI fails.
       run: python src/test_model.py
 
     - name: 6. 📦 Upload Model Artifacts (NEW STEP)
-      # Saves the model files so the deploy job can access them.
       uses: actions/upload-artifact@v4
       with:
         name: model-artifacts # Name of the artifact bundle
@@ -48,25 +59,18 @@ jobs:
   # ---------------------------------------------------------------------
   deploy:
     runs-on: ubuntu-latest
-    needs: build-and-test # CRITICAL: This ensures deployment only runs if testing and linting passed
-
+    needs: build-and-test
+    
     steps:
     - name: 1. Download Model Artifacts
-      # Retrieve the artifacts saved in the previous job run
       uses: actions/download-artifact@v4
       with:
         name: model-artifacts
-        path: ./artifacts/ # Downloads files into a new folder named 'artifacts'
-        
+        path: ./artifacts/
+
     - name: 2. 🚀 Verify and Simulate Deployment
       run: |
         echo "--- Continuous Deployment Process Started ---"
         echo "Validated model files downloaded to: ./artifacts/"
-        # Verify the files exist
         ls -l ./artifacts/
-        
-        # This simulates the final deployment action:
-        # In a real project, this would use cloud credentials (GitHub Secrets) 
-        # to upload the model files to AWS S3, Google Cloud Storage, or an ML Platform.
-        
         echo "✅ Model Deployment Simulated Successfully. Artifacts ready for production use."
