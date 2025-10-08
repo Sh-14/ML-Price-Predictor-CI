@@ -96,3 +96,4 @@ if __name__ == "__main__":
     if X_train is not None:
         trained_model = train_model(X_train, y_train)
         evaluate_and_save(trained_model, X_test, y_test)
+    
