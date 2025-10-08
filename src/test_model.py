@@ -6,69 +6,74 @@ import os
 
 # --- Configuration ---
 MODEL_PATH = 'src/best_ml_model.pkl'
+PREPROCESSOR_PATH = 'src/preprocessor.pkl'
 DATA_PATH = 'expanded_clothes_shoes.csv'
 TARGET_COLUMN = 'discounted_price'
-# Set an acceptable threshold for your test: 
-# If MAE is greater than this, the test fails. Adjust this based on your model's real performance.
-MAE_THRESHOLD = 2000 
+
+# CRITICAL: This threshold determines CI success. Adjust this value
+# based on your model's ACTUAL performance.
+MAE_THRESHOLD = 2000
+
 
 def clean_and_convert_price(df, column):
-    df[column] = df[column].astype(str).str.replace('₹', '', regex=False).str.replace(',', '', regex=False).str.strip()
+    """Helper to clean price columns, fixing E501 and W291."""
+    df[column] = (
+        df[column].astype(str)
+        .str.replace('₹', '', regex=False)
+        .str.replace(',', '', regex=False)
+        .str.strip()
+    )
     df[column] = pd.to_numeric(df[column], errors='coerce')
     return df
 
+
 def run_ci_tests():
     """Loads the model and runs a critical performance test."""
-    print("--- Starting CI Model Verification Test ---")
-    
-    # 1. Check if model exists
+    print("--- Starting CI Model Verification Test (MAE check) ---")
+
+    # 1. Check for required artifacts
     if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"Error: Model file not found at {MODEL_PATH}. Run train.py first.")
+        raise FileNotFoundError(f"Error: Model file not found at {MODEL_PATH}. Was train.py run?")
+    if not os.path.exists(PREPROCESSOR_PATH):
+        raise FileNotFoundError(f"Error: Preprocessor not found at {PREPROCESSOR_PATH}.")
 
-    # 2. Load the model and preprocessor (or just model, if preprocessor is separate)
-    try:
-        model = joblib.load(MODEL_PATH)
-        print("Model loaded successfully.")
-    except Exception as e:
-        raise RuntimeError(f"Could not load the model: {e}")
+    # 2. Load the artifacts
+    model = joblib.load(MODEL_PATH)
+    preprocessor = joblib.load(PREPROCESSOR_PATH)
+    print("Model and Preprocessor loaded successfully.")
 
-    # 3. Prepare the Test Data (using the same split as in train.py)
+    # 3. Prepare the Test Data (Must exactly match the split done during training)
     df = pd.read_csv(DATA_PATH)
     df = clean_and_convert_price(df, 'price')
     df = clean_and_convert_price(df, 'original_price')
     df = df.dropna(subset=[TARGET_COLUMN])
     df = df[df[TARGET_COLUMN] > 0]
-    
+
     X = df.drop(columns=[TARGET_COLUMN])
     y = df[TARGET_COLUMN]
-    
-    # Get the test set
+
+    # Get the test set (using same random_state=42 as in train.py)
     _, X_test, _, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
-    
-    # 4. Apply the preprocessor (MUST be loaded and applied identically to training)
-    PREPROCESSOR_PATH = 'src/preprocessor.pkl'
-    if not os.path.exists(PREPROCESSOR_PATH):
-        raise FileNotFoundError(f"Error: Preprocessor not found at {PREPROCESSOR_PATH}.")
-        
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-    X_test_processed = preprocessor.transform(X_test)
 
+    # 4. Transform Test Data
+    X_test_processed = preprocessor.transform(X_test)
 
     # 5. Run the Core Performance Test
     y_pred = model.predict(X_test_processed)
     mae = mean_absolute_error(y_test, y_pred)
-    
+
     print(f"Calculated Mean Absolute Error (MAE): {mae:.2f}")
     print(f"Acceptable MAE Threshold: {MAE_THRESHOLD:.2f}")
-    
-    # Assertion that determines CI success or failure
+
+    # Assertion: If the calculated MAE is GREATER than the threshold, the test FAILS.
     assert mae <= MAE_THRESHOLD, (
-        f"TEST FAILED: Model MAE ({mae:.2f}) is worse than the allowed threshold ({MAE_THRESHOLD:.2f})."
+        f"TEST FAILED: Model MAE ({mae:.2f}) is WORSE than the allowed threshold ({MAE_THRESHOLD:.2f})."
     )
 
     print("\n✅ CI TEST PASSED: Model performance meets the required threshold.")
+
 
 if __name__ == "__main__":
     run_ci_tests()
