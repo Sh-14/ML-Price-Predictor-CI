@@ -14,6 +14,8 @@ DATA_PATH = 'expanded_clothes_shoes.csv'
 PREPROCESSOR_PATH = 'src/preprocessor.pkl'
 PROCESSED_DATA_PATH = 'src/processed_data.csv'
 
+
+
 def clean_and_convert_price(df, column):
     """Removes currency symbols and converts price columns to numeric."""
     # Handle both '₹' and other non-numeric characters
@@ -21,6 +23,8 @@ def clean_and_convert_price(df, column):
     # Convert to numeric, coercing errors to NaN
     df[column] = pd.to_numeric(df[column], errors='coerce')
     return df
+
+
 
 def create_preprocessing_pipeline(df):
     """
@@ -61,6 +65,8 @@ def create_preprocessing_pipeline(df):
     preprocessor.fit(df)
     
     return preprocessor
+
+
 
 def run_preprocessing():
     """Main function to load data, preprocess, and save files."""
