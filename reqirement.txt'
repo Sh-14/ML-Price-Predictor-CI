@@ -1,0 +1,10 @@
+# Core Data Handling and Math
+pandas
+numpy
+
+# Machine Learning Libraries
+scikit-learn
+joblib
+
+# Code Quality (for the Lint Job)
+flake
