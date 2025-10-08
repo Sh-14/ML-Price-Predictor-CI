@@ -33,4 +33,4 @@ jobs:
       
     - name: 5. 🧪 Run ML Model Tests (Test Job)
       # Execute the test script. If it raises an AssertionError (MAE is too high), the CI fails.
-      run: python src/test_model.py
+      run: python src/test.py
